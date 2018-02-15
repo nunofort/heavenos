@@ -1,0 +1,217 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+<TITLE>OS Project</TITLE>
+<META NAME="generator" CONTENT="txt2html v1.28">
+</HEAD>
+<BODY>
+
+<P>
+<STRONG>=============[ ABOUT THE PROJECT</STRONG>
+
+<P>
+At some years ago, i was trying to develop an operating system with help 
+of some buddy hackers (not evil guys..as you may think of that word, 
+but just normal people who like to hack code, study algorithms and technologies, 
+of computing environments as myself) on the internet.
+Unfortunately, the development was locked because of an annoying 
+hardware floppy disk issue and in addition, i became to have a bit 
+less time to work on it. <BR>
+At that stage, the development was stopped!
+So, in hope someone want to see and improve the source code on what is done in the 
+operating system, the source code is now released to the public.
+Feel free to download and experiment the code. At the bottom of this document is 
+information how to get it to work.<BR>
+Well..if you have some knowledge on the subject, 
+i will be glad to see future enhancements on the OS code. 
+
+
+
+<P>
+<STRONG>============[ BACKGROUND MESSAGE (OUTDATED)</STRONG>
+
+<P>
+At the moment, I think 'Linux' is the best Operating System around, for all cpu
+types. And you pehraps ask me...why???<BR>
+Well...in first place, it's all FREE!<BR>
+Second, i think Linux has all features which an Advanced Operating System should
+ have.<BR>
+Third, Linux is very flexible when speaking about supporting new features.
+But the Linux environment, is not so simple and practical as we would expect.
+Should be a good environment for programmers! :)
+Only experienced users know how to configure it and even then, in some situations 
+is not so easy.<BR>
+So, i had an idea of developping my dream Operating System.
+My idea was to develop a new Operating System from scratch, nice, clean, easy, 
+practical and at the same time, running with a small amount of code.
+At the time, I am developping Heaven OS in NASM(The FREE Netwide 
+Assembler) and testing it on Bochs (A FREE x86 CPU Emulator), under Linux, which is 
+allways a good idea ! :)<BR>
+An Object Oriented Compiler is on the way, to make coding even more easier.
+All people can contribute on this project, with feedback for helpping 
+solving some problems and programming applications, drivers or libs for the 
+Operating System.
+
+
+<P>
+<STRONG>=============[ ACTUAL DESCRIPTION</STRONG>
+
+<P>
+This project focus on developping an original alternative 32-bit operating system for Intel 
+80386 compatible processors.<BR>
+Is not intended to compare it to the today modern operating systems, but
+try to get the best features around and hope to discover better ways 
+to do things.<BR>
+At first, the operating system should be a simple and pratical plataform for developpment 
+running with a small amount of code, after that, who knows what it could be.
+
+
+<P>
+<STRONG>============[ OPERATING SYSTEM INITIALIZATION STEPS (EXAMPLE)</STRONG>
+
+<P>
+<HR>
+ Boot Sector 512 Byte Image
+<HR>
+
+<UL>
+  <LI>Setting Registers for 16-Bit Segments
+  <LI>Check for 80386+ CPU Family
+  <LI>Show the Initialization message on the screen
+  <LI>Copy Kernel from disk to a pre-defined location in memory
+
+</UL>
+<HR>
+HeavenOS Kernel Image
+<HR>
+
+<UL>
+  <LI>Disable interrupts ( we don't need them now! )
+  <LI>Enable GATE A20 ( for Addressing Memory 1MB+ )
+  <LI>Load the pre-defined GDT into GDTR(GDT Register)
+  <LI>Switch to PMODE ( YEAH!! That's it! )
+  <LI>ok, now make a FAR JUMP to the KERNEL 32-Bit location address
+  <LI>Setting 32-Bit PMODE registers
+  <LI>Initialize IDT with Interrupt Routine addresses
+  <LI>Load the pre-defined IDT into IDTR(IDT Register)
+  <LI>Programming the PIC8259 for IDT (Enabling only IRQ0,IRQ1,IRQ2 and IRQ8)
+  <LI>Disabling IRQ0 (PIT interrupts)
+  <LI>Programming the PIT8254 Chip (IRQ0)
+  <LI>Programming the Keyboard 8042 Chip (IRQ1)
+  <LI>Enabling RTC interrupts (IRQ8)
+  <LI>Enable Interrupts
+  <LI>Show the Initialization mensage on the screen
+  <LI>Check CPU Family
+  <LI>Check CPU Signature if possible
+  <LI>Check CPU ID if possible
+  <LI>Check System RAM
+  <LI>Check System Date
+  <LI>Check System Time
+  <LI>Check PNP Bios
+  <LI>Check PCI Devices(only S3 Cards, for testing!)
+  <LI>Check ISA PNP Devices(only Creative Labs and OPTi Cards (address 0x200), for testing!)
+  <LI>Some Delay (with RTC Chip)
+  <LI>Fade Out Effect
+  <LI>Initialize TSS's Information
+  <LI>Load the pre-defined TSS Descriptor into TR(Task Register)
+  <LI>Disable Interrupts
+  <LI>Enabling IRQ0, Timer TASK GATE(for Sheduler)
+  <LI>Jump to the Sheduler (begin TASK-SWITCH and enable interrupts)
+<STRONG>(MULTI-TASKING)</STRONG>
+  <LI>TASK0: sheduler (IRQ0 - task manager)
+  <LI>TASK1: shell
+  <LI>TASK2: scroll mensage
+  <LI>TASK3: time
+  <LI>TASK4: date
+<HR>
+<STRONG>TODO:</STRONG>
+<HR>
+  <LI>Copy Floppy Disk Image to Ramdisk
+  <LI>Do Filesystem Operations
+
+
+</UL>
+<P>
+<STRONG>===============[ LAST NEWS MESSAGE (OLD)</STRONG>
+
+<P>
+The development is really, really slow, if not stopped at all! :(
+The cause of this..is a problem that i found on Boot Loader code..and til now dont know how to resolve it..
+or what the problem really is.<BR>
+<STRONG>SITUATION:</STRONG>
+
+<P>
+When Copying Kernel from Floppy Disk to Memory (INT 13h function 02h),
+with kernel size greater than X bytes, the system enters in a loop!
+
+<P>
+Well..I hope someone have more luck than i, to solve the problem! :)
+Against this..new features were added to the kernel and some code routines reviewed! :)
+
+<P>
+So..you can expect a new version of the Operating System when the Boot Loader code problem, 
+is solved, and working well.
+
+<P>
+<STRONG>AT THE TIME, THE DEVELOPMENT WAS STOPPED! :(</STRONG>
+
+<P>
+<STRONG>=============[ DOWNLOADS</STRONG>
+
+<P>
+Operating System Source Code 
+<a href="http://www.sourceforge.net/heavenos/">LINK</a>
+<br>
+<a href="http://heavenos.sourceforge.net/heavenos_shot.jpg">screenshot</a>
+<br>
+<img src="http://heavenos.sourceforge.net/heavenos_shot.jpg" width="96" height="96">
+
+<P>
+BOCHS (A FREE PC x86 Emulator)
+<a href="http://bochs.sourceforge.net/">LINK</a>
+
+<P>
+NASM (The FREE Netwide Assembler)
+<a href="http://nasm.sourceforge.net/">LINK</a>
+
+<P>
+DJGPP - FREE 32-Bit C/C++ Compiler (DOS)
+<a href="http://www.delorie.com/djgpp/">LINK</a>
+
+<P>
+LCC - FREE 32-Bit C/C++ Compiler (Win32)
+<a href="http://www.cs.virginia.edu/~lcc-win32/">LINK</a>
+
+
+
+<P>
+<STRONG>=============[ TESTING</STRONG>
+
+<P>
+Writing Kernel Image to floppy disk under LINUX :
+
+<P>
+=&gt;dd if=HeavenOS.img of=/dev/fd0 bs=512 seek=0");
+
+<P>
+Writing Kernel Image to floppy disk under DOS/WINDOWS :
+
+<P>
+=&gt;rawrite -f HeavenOS.img -d a
+
+<H1><A NAME="section-1.">When running the kernel:</A></H1>
+
+<P>
+you may need to press ENTER or ESC to continue the processing.. 
+
+
+<P>
+<STRONG>============[ THANKS TO SOME HACKERS OF WISDOM</STRONG>
+
+<P>
+This goes to those guys who help me with their knowledge and sometimes with code, other times with technical documents on chat conversations.
+
+
+
+</BODY>
+</HTML>

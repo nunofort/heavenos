@@ -1,0 +1,286 @@
+     1                                  [BITS 16]
+     2                                  [ORG 0x7C00]
+     3                                  
+     4                                  ; DOS header alike boot sector 
+     5                                  ;==========================================================
+     6                                  ;DB 0xEB,0x1E,0x90 ; SHORT JUMP to 0x1E
+     7                                  ;DB 'HeavenOS'     ; OEM Name and Number
+     8                                  ;DW 512		  ; Bytes per Sector (512)
+     9                                  ;DB 0	 	  ; Sectors per Allocation Unit (cluster)
+    10                                  ;DW 0		  ; Reserved seectors (for Boot Record)
+    11                                  ;DB 0		  ; Number of FATs
+    12                                  ;DW 0		  ; Number of Root Directories Entries
+    13                                  ;DW 0		  ; Number of logical Sectors
+    14                                  ;DB 0xF0           ; Medium Descriptor Byte (0xF0 - FD, 0xF8 - HD)   
+    15                                  ;DW 0		  ; Sectors per FAT
+    16                                  ;DW 18		  ; Sectors per TRACK
+    17                                  ;DW 2		  ; Number of Heads
+    18                                  ;DW 0		  ; Number of Hidden Sectors
+    19                                  ;DW 0xAA55	  ; Load Signature - 0xAA55	
+    20                                  ;==========================================================
+    21                                  ; Boot Loader
+    22                                  ;==========================================================
+    23                                  
+    24                                  ; save EDX value in memory (the last 4 bytes of conventional memory)
+    25                                  ; CPU ID Information
+    26 00000000 B80090                  mov ax, 0x9000
+    27 00000003 8EC0                    mov es, ax
+    28 00000005 BFFCFF                  mov di, 0xFFFC
+    29 00000008 26668915                mov dword [es:di], edx
+    30                                  
+    31                                  ; setting regs
+    32 0000000C B80000                  mov ax, 0 
+    33 0000000F 8ED8                    mov ds, ax
+    34 00000011 8EC0                    mov es, ax
+    35 00000013 8ED0                    mov ss, ax
+    36 00000015 BC0080                  mov sp, (0x7C00 + 0x400)
+    37 00000018 BD0000                  mov bp, 0 
+    38                                  
+    39 0000001B EA[3100]0000            jmp  0:start
+    40                                  
+    41                                  ; COLD REBOOT
+    42                                  cold_boot:
+    43 00000020 B84000                  mov             ax, 0x0040                      ; ax = 0040h
+    44 00000023 8EC0                    mov             es, ax                          ; point es to ax
+    45 00000025 26C70672000000          mov             word [es:0072h], 0x0000         ; Reset
+    46 0000002C EA                      db              0xEA                            ; JUMP
+    47 0000002D 0000                    dw              0x0000                          ; FFFF:0000
+    48 0000002F FFFF                    dw              0xFFFF                          ; ! REBOOTING !
+    49                                  ;int     0x19                                   ; warm boot pc 
+    50                                  
+    51                                  start:
+    52                                  
+    53                                  ;=======================================================================
+    54                                  ; Check if CPU is 386+
+    55                                  ;=======================================================================
+    56 00000031 9C                      pushf                   ; save flags for later
+    57 00000032 30E4                    xor     ah,ah           ; clear high byte
+    58 00000034 50                      push    ax              ; push AX on the stack
+    59 00000035 9D                      popf                    ; pop this value into the flag register
+    60 00000036 9C                      pushf                   ; push flags on the stack
+    61 00000037 58                      pop     ax              ; ...and get flags into AX
+    62 00000038 80E4F0                  and     ah,0f0h         ; try to set the high nibble
+    63 0000003B 80FCF0                  cmp     ah,0f0h         ; on a 80386, the high nibble can never be 0f0h
+    64 0000003E 74E0                    je      cold_boot
+    65 00000040 B470                    mov     ah,70h          ; now try to set NT and IOPL
+    66 00000042 50                      push    ax
+    67 00000043 9D                      popf
+    68 00000044 9C                      pushf
+    69 00000045 58                      pop     ax
+    70 00000046 80E470                  and     ah,70h          ; if they couldn't be modified, no 386 is installed
+    71 00000049 74D5                    jz      cold_boot
+    72 0000004B 9D                      popf                    ; restore flags
+    73                                  ;=======================================================================
+    74                                  
+    75                                  ; set ES to video address
+    76 0000004C B800B8                  mov ax, 0xB800
+    77 0000004F 8EC0                    mov es, ax
+    78                                  
+    79                                  ;;; RM_Clear_Screen
+    80 00000051 B9A00F                  mov cx, 0x0fa0
+    81 00000054 BF0000                  mov di, 0
+    82                                  next_char0:
+    83 00000057 2666C70500000000        mov dword [es:di], 0
+    84 0000005F 81C70400                add di, 4
+    85 00000063 39CF                    cmp di, cx
+    86 00000065 75F0                    jne next_char0
+    87                                  
+    88                                  ;;; RM_Write_Boot_Mensage
+    89 00000067 BFA200                  mov di, 160*0x01 + 2*0x01
+    90 0000006A BE[FA00]                mov si, boot_msg
+    91 0000006D B403                    mov ah, 0x03
+    92                                  next_char:
+    93 0000006F 8A04                    mov al, byte [si]
+    94 00000071 268905                  mov word [es:di], ax
+    95 00000074 47<rept>                times 2 inc di
+    96 00000076 46                      inc si
+    97 00000077 803C00                  cmp byte [si],0
+    98 0000007A 75F3                    jne next_char
+    99                                  
+   100                                  
+   101                                  ;=======================================================================
+   102                                  ; Copying Kernel Image from Floppy Filesystem to Memory
+   103                                  ; point es:bx to 0x0050:0x0000
+   104                                  ;=======================================================================
+   105 0000007C B80001                  mov    ax, kernel_address		; segment
+   106 0000007F 8EC0                    mov    es, ax          
+   107 00000081 BB0000                  mov    bx, 0x0000  		; offset 
+   108                                  ; load data from disk to [es:bx]
+   109 00000084 B402                    mov    ah, 0x02    		; read sector(s)
+   110 00000086 B200                    mov    dl, 0x00    		; disk (0x00 - First FD, 0x80 - First HD)
+   111 00000088 B600                    mov    dh, 0       		; head  
+   112 0000008A B500                    mov    ch, 0       		; track (0-1023)
+   113 0000008C B102                    mov    cl, 2      			; sector (2 higher bits = 10-9 bits of track)
+   114 0000008E B011                    mov    al, 17	   		; max. sectors = 18 
+   115                                  
+   116 00000090 CD13                    int  	0x13			;READ
+   117                                  
+   118                                  ;second pass
+   119 00000092 81C30022                add	bx, 512*17		; next offset
+   120 00000096 B601                    mov dh, 1			; another head  
+   121 00000098 B500                    mov ch, 0			; track 0 (0-1023)
+   122                                  
+   123                                  ;next_sectors:
+   124 0000009A B80001                  mov    ax, kernel_address  		; segment
+   125 0000009D 8EC0                    mov    es, ax          
+   126                                  ;mov    bx, 0x0000  		; offset 
+   127                                  ; load data from disk to [es:bx]
+   128 0000009F B402                    mov    ah, 0x02    		; read sector(s)
+   129 000000A1 B200                    mov    dl, 0x00    		; disk (0x00 - First FD, 0x80 - First HD)
+   130 000000A3 B101                    mov    cl, 1      			; sector (2 higher bits = 10-9 bit of track)
+   131 000000A5 B012                    mov    al, 18	   		; max. sectors = 18  (was 18)
+   132                                  
+   133 000000A7 CD13                    int    0x13
+   134                                  
+   135                                  ;third pass
+   136 000000A9 81C30024                add	bx, 512*18		; next offset
+   137 000000AD B600                    mov dh, 0			; head  
+   138 000000AF B501                    mov ch, 1			; track 1 (0-1023)
+   139                                  
+   140 000000B1 B80001                  mov    ax, kernel_address  		; segment
+   141 000000B4 8EC0                    mov    es, ax          
+   142                                  ;mov    bx, 0x0000  		; offset 
+   143                                  ; load data from disk to [es:bx]
+   144 000000B6 B402                    mov    ah, 0x02    		; read sector(s)
+   145 000000B8 B200                    mov    dl, 0x00    		; disk (0x00 - First FD, 0x80 - First HD)
+   146 000000BA B101                    mov    cl, 1      			; sector (2 higher bits = 10-9 bit of track)
+   147 000000BC B012                    mov    al, 18	   		; max. sectors = 18  (was 18)
+   148                                  
+   149 000000BE CD13                    int    0x13
+   150                                  
+   151 000000C0 E91200                  jmp read_out 			; skip the following code it has read enough for 12k
+   152                                  ; temp skip this
+   153 000000C3 FEC6                    inc	dh
+   154 000000C5 81C30024                add	bx, 512*18
+   155 000000C9 80FE02                  cmp dh, 2
+   156 000000CC 7504                    jne next_head
+   157 000000CE B600                    mov	dh, 0
+   158 000000D0 FEC5                    inc ch
+   159                                  next_head:
+   160 000000D2 80FD02                  cmp ch, 2
+   161                                  ;jne next_sectors 
+   162                                  
+   163                                  ;cmp    ah, 0
+   164                                  ;je     skip_reset
+   165                                  ;do_reset:
+   166                                  ;mov    ah, 0x00    		; reset drive
+   167                                  ;mov    dl, 0x00    		; disk type 
+   168                                  ;xor    ax, ax
+   169                                  ;int    0x13
+   170                                  ;jmp short copy_kernel
+   171                                  ;skip_reset:
+   172                                  
+   173                                  read_out:
+   174                                  ;====================================================================
+   175                                  ; TODO : Read a Sector for Protection in the future
+   176                                  ; Password protection ?
+   177                                  ;====================================================================
+   178                                  
+   179 000000D5 B800B8                  mov ax, 0xB800
+   180 000000D8 8EC0                    mov es, ax
+   181                                  ;;; RM_Write_Boot_Mensage
+   182 000000DA BF4201                  mov di, 160*0x02 + 2*0x01
+   183 000000DD BE[1101]                mov si, jump_msg
+   184 000000E0 B403                    mov ah, 0x03
+   185                                  next_char1:
+   186 000000E2 8A04                    mov al, byte [si]
+   187 000000E4 268905                  mov word [es:di], ax
+   188 000000E7 47<rept>                times 2 inc di
+   189 000000E9 46                      inc si
+   190 000000EA 803C00                  cmp byte [si],0
+   191 000000ED 75F3                    jne next_char1
+   192                                  
+   193                                  check_keyboard:
+   194 000000EF E460                    in   al, 0x60                
+   195 000000F1 3C01                    cmp  al, 0x01     	; check ESC key           
+   196 000000F3 75FA                    jne  check_keyboard          
+   197                                  
+   198                                  ; Disable Floppy Motor
+   199                                  ;mov al,0001100b  ;Disable all motors, controller enabled, DMA  & IRQ enabled
+   200                                  ;mov dx,0x3F2     ;Digital Output Register
+   201                                  ;out dx,al        ;Sending the command to the controller
+   202                                  
+   203                                  ; turn off floppy motor
+   204                                  ;mov dx,3F2h
+   205                                  ;xor al,al
+   206                                  ;out dx,al
+   207                                  
+   208                                  ; JUMP to address 0050:0000 RM (0x00000500 PM)
+   209                                  ;jmp  0x0050:0
+   210 000000F5 EA00000001              jmp kernel_address:0
+   211                                  
+   212                                  ;=======================================================================
+   213 000000FA 4C6F6164696E672042-     boot_msg		DB 	'Loading Boot Sector...',0 
+   214 00000103 6F6F7420536563746F-
+   215 0000010C 722E2E2E00         
+   216 00000111 507265737320455343-     jump_msg		DB	'Press ESC for Jumping to Kernel 32-bit PM Code...',0
+   217 0000011A 20666F72204A756D70-
+   218 00000123 696E6720746F204B65-
+   219 0000012C 726E656C2033322D62-
+   220 00000135 697420504D20436F64-
+   221 0000013E 652E2E2E00         
+   222                                  kernel_address equ	0x100
+   223                                  
+   224 00000143 4865726500              debug_msg		DB	'Here',0
+   225                                  
+   226 00000148 0200                    Yval			DW	2   ; current Y console position
+   227                                  
+   228                                  ;============================
+   229                                  ; added by stdio	START
+   230                                  ;============================
+   231                                  
+   232                                  print_d:
+   233 0000014A 06                      	push es			; Save es register
+   234 0000014B 60                      	pusha			; save general purpose registers (E)AX, (E)CX, (E)DX, (E)BX, (E)SP, (E)BP, (E)SI, (E)DI
+   235                                  	; increment Line on print
+   236 0000014C BE[4801]                	mov si,Yval		; Address of Yval
+   237 0000014F 8B3C                    	mov di, word [si]	; copy contents pointed by si (Yval)
+   238 00000151 81C70100                	add di,1		; sum + 1
+   239 00000155 893C                    	mov word [si] ,di	; store in mem pointed by si (Yval)
+   240 00000157 69FFA000                	imul di,160 		; Y*columns (160)
+   241 0000015B 81C70200                	add di,2 		; X value
+   242                                  
+   243                                  	; copy char to video , text mode	
+   244                                  	;mov di, 160*2 + 2*0x01
+   245 0000015F B800B8                  	mov ax,0xB800		; Address of text memory
+   246 00000162 8EC0                    	mov es,ax		; Make es, 0xB800
+   247 00000164 BE[4301]                	mov si, debug_msg	; si is address of debug_msg
+   248 00000167 B404                    	mov ah, 0x04		; color/attribute
+   249                                  	pd_next_char:
+   250 00000169 8A04                    	mov al, byte [si]	; char
+   251 0000016B 268905                  	mov word [es:di], ax	; copy char to video mem
+   252 0000016E 47<rept>                	times 2 inc di		; increase by 2 video
+   253 00000170 46                      	inc si			; point to next char
+   254 00000171 803C00                  	cmp byte [si],0		; is end of string?
+   255 00000174 75F3                    	jne pd_next_char	; if not go to next char
+   256 00000176 61                      	popa			; restore general purpose registers
+   257 00000177 07                      	pop es			; restore es
+   258 00000178 C3                      ret
+   259                                  ;======================== END
+   260                                  
+   261                                  ;S = (lsn mod spt) + 1
+   262                                  ;H = (lsn / spt) mod nh
+   263                                  ;T = lsn / (spt*nh)
+   264                                  ;
+   265                                  ;S is the physical sector number
+   266                                  ;H is the head number
+   267                                  ;T is the track number
+   268                                  ;lsn is the logical sector number
+   269                                  ;spt is the number of sectors per track
+   270                                  ;nh is the number of heads 
+   271                                  ;/ is an integer division
+   272                                  ;mod is the modulo operation
+   273                                  
+   274                                  ;-----------------------------------------------------------------------
+   275 00000179 00<rept>                times 510-($-$$) DB 0x0 ; stdio, nop operation
+   276 000001FE 55AA                    DW	0xAA55 		; BOOT LOADER SIGNATURE
+   277                                  ;-----------------------------------------------------------------------
+   278                                  
+   279                                  ; PM Address(REAL) = 16 * RM Segment + RM Offset
+   280                                  ;  Memory Address   
+   281                                  ;     65536        = 16 * 4096 + 0 
+   282                                  ;                  = (RM Segment << 4) + RM Offset
+   283                                  ;
+   284                                  ; 16*0x1000 = 65536*1 start first segment 
+   285                                  ; 16*0x2000 = 65536*2 start second segment
+   286                                  ; 16*0x3000 = 65536*3 start third segment

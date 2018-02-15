@@ -1,0 +1,6 @@
+nasm -o boot.img -f bin -l boot.lst boot.asm
+nasm -o kernel.img -f bin -l kernel.lst kernel.asm
+cat boot.img kernel.img > ../HeavenOS.img
+#nasm -o test_kernel.img -f bin -l test_kernel.lst test_kernel.asm
+#cat boot.img test_kernel.img > ../HeavenOS.img
+#cp HeavenOS.img ..

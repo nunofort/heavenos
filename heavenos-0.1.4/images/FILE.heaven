@@ -1,0 +1,125 @@
+
+asm {
+"0xFA";
+
+"0xE492";
+"0x0C02";
+"0xEB00";
+"0xE692";
+
+"0xB0D1";
+"0xEB00";
+"0xE664";
+"0xB0DF";
+"0xEB00";
+"0xE660";
+"0xB0FF";
+"0xEB00";
+"0xE664";
+
+"0x0F01164D05";
+
+"0x0F20C0";
+"0x660D01000000";
+"0x0F22C0";
+	
+"0xB81000";
+"0x8EC0";
+"0x8ED8";
+"0x8ED0";
+"0x8EE0";
+"0x8EE8";
+"0x66BC00500000";
+"0x66BD00500000";
+}
+
+class GDT
+{
+	asm {
+	"gdt_ptr@";
+	"0x1700";
+	"0x53050000";
+	"gdt@";
+	"0x0000000000000000";
+	"0xFFFF000000";
+	"10011011b";
+	"11001111b";
+	"0x00";
+	"0xFFFF000000";
+	"10010011b";
+	"11001111b";
+	"0x00";
+	}
+};
+
+class Screen
+{
+	int v;
+	char value = 0x03;
+	int mode = 0x0004 + value;
+	void clear()
+	{
+		asm {
+		"mov eax, $0x00000000";
+		"mov ecx, $0x000B8FA0";
+		"mov edi, $0x000B8000";
+		"next_zero@";
+		"mov [es:edi], eax";
+		"inc edi";
+		"inc edi";
+		"inc edi";
+		"inc edi";
+		"cmp edi, ecx";
+		"jne %next_zero";
+		}
+	}
+
+	void writeText(char color,int line,int col,pointer text)
+	{
+		long scrpos = 0xB8000+160*line+2*col;
+		asm {
+		"mov ecx, $scrpos";
+		"mov edi, [es:ecx]";
+		"mov ecx, $text";
+		"mov esi, [es:ecx]";
+		"mov ecx, $value";
+		"mov ah, [es:ecx]";
+		"next_char@";
+		"mov al, [es:esi]";
+		"mov [es:edi], ax";
+		"inc edi";
+		"inc edi";
+		"inc esi";
+		"cmp [es:esi], $0x00";
+		"jne %next_char";
+		}
+		value = value + 1;
+	}
+	
+	void readKey(int i)
+	{
+		asm {
+		"check_key@";
+		"in al, $0x60";
+		"cmp al, $0x1C";
+		"jne %check_key";
+		}
+		this.clear();
+	}
+};
+
+main
+{ 
+	char mensage[] = {"The Heaven OS Compiler is working!...:)"};
+	int num[] = {1,2,32,4,5,6,7,8,9};
+	char color1 = 0x1E;
+	char ascii = '>';
+	int val1 = 0x01;
+	int val2 = 1b;
+	Screen scr;
+	val1 = val1 + val2;
+        scr.clear();
+        scr.writeText(0x03,0x01,0x01,mensage);
+        scr.writeText(0x03,0x02,0x01,mensage);
+	scr.readKey(val2);
+}
